@@ -5,3 +5,9 @@ data/
 .vscode/
 test-data/
 tmp/
+
+# OAuth credentials - never commit these
+credentials.json
+token.json
+cmd/credentials.json
+cmd/token.json
