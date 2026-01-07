@@ -1,0 +1,32 @@
+{
+  "BaseURL": "https://tamanhhospital.vn/chuyen-gia/page/{page}/?filter_search&filter_diadiem=36&filter_chuyenkhoa&filter_chucvu&filter_ngonngu&filter_hocham&filter_hocvi",
+  "StartPage": 1,
+  "EndPage": 2,
+  "PagePattern": "{page}",
+  "Selector": "div.info_chuyengia > a",
+  "AttributeSelector": "href",
+  "AdvancedConfig": {
+    "MaxConcurrent": 10,
+    "MaxRetries": 3,
+    "RetryDelay": 2,
+    "RateLimit": 200,
+    "MaxDepth": 1,
+    "CustomFilters": [
+      "example filter regex 1",
+      "example filter regex 2"
+    ]
+  },
+  "TwoPhaseCrawlConfig": {
+    "Attributes": [
+      {
+        "Selector": "div#sss",
+        "ElementAttribute": "",
+        "JsonAttribute": "degree",
+        "GetElementContent": true
+      }
+    ]
+  },
+  "OutputFile": "crawl_results.json",
+  "TwoPhaseCrawl": true,
+  "FollowLinks": false
+}

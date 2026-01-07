@@ -1,0 +1,7 @@
+*.exe
+*.iml
+data/
+.idea/
+.vscode/
+test-data/
+tmp/
