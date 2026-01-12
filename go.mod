@@ -3,8 +3,8 @@ module go-project
 go 1.24.0
 
 require (
-	fyne.io/fyne/v2 v2.7.0
-	github.com/charmbracelet/bubbletea v1.3.7
+	fyne.io/fyne/v2 v2.7.2
+	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.16.0
@@ -21,7 +21,7 @@ require (
 	cloud.google.com/go/auth v0.17.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	fyne.io/systray v1.11.1-0.20250603113521-ca66a66d8b58 // indirect
+	fyne.io/systray v1.12.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
