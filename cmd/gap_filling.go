@@ -175,7 +175,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.placeholders = extractPlaceholders(msg.content)
 
 		if len(m.placeholders) == 0 {
-			m.result = m.template
+			m.result = strings.ReplaceAll(m.template, "\x00", "")
 			clipboard.WriteAll(m.result)
 			m.state = stateAskContinue
 		} else {
