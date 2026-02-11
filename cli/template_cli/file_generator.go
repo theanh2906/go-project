@@ -442,7 +442,6 @@ func GetAvailableFileTypes() []FileType {
 		FileTypeDockerCompose,
 		FileTypeDockerfile,
 		FileTypeJenkinsfile,
-		FileTypeMakefile,
 		FileTypeGitignore,
 		FileTypeEnvExample,
 	}
@@ -454,7 +453,6 @@ func GetFileTypeDescription(ft FileType) string {
 		FileTypeDockerCompose: "Docker Compose configuration file",
 		FileTypeDockerfile:    "Dockerfile for containerization",
 		FileTypeJenkinsfile:   "Jenkins CI/CD pipeline",
-		FileTypeMakefile:      "Makefile for build automation",
 		FileTypeGitignore:     ".gitignore file for Go projects",
 		FileTypeEnvExample:    ".env.example template file",
 	}
@@ -467,7 +465,6 @@ func GetDefaultFileName(ft FileType) string {
 		FileTypeDockerCompose: "docker-compose.yml",
 		FileTypeDockerfile:    "Dockerfile",
 		FileTypeJenkinsfile:   "Jenkinsfile",
-		FileTypeMakefile:      "Makefile",
 		FileTypeGitignore:     ".gitignore",
 		FileTypeEnvExample:    ".env.example",
 	}

@@ -138,7 +138,6 @@ var fileTypeItems = []struct {
 	{FileTypeDockerCompose, "Docker Compose", "docker-compose.yml configuration", "🐳"},
 	{FileTypeDockerfile, "Dockerfile", "Multi-stage Dockerfile for Go", "📦"},
 	{FileTypeJenkinsfile, "Jenkinsfile", "Jenkins CI/CD pipeline", "🔧"},
-	{FileTypeMakefile, "Makefile", "Build automation with Make", "⚙️"},
 	{FileTypeGitignore, ".gitignore", "Git ignore file for Go projects", "🙈"},
 	{FileTypeEnvExample, ".env.example", "Environment variables template", "🔐"},
 }
