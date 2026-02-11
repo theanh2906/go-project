@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -124,6 +125,26 @@ func (g *ProjectGenerator) writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
+func RunGoModTidy(projectPath string) error {
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = projectPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func IsValidProjectName(name string) bool {
+	if len(name) == 0 {
+		return false
+	}
+	for _, char := range name {
+		if !((char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '-' || char == '_') {
+			return false
+		}
+	}
+	return true
+}
+
 // ==================== REST API Generators ====================
 
 func (g *ProjectGenerator) generateRESTMainFile() string {
@@ -140,23 +161,17 @@ import (
 )
 
 func main() {
-	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Set Gin mode
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Initialize router
 	router := gin.Default()
-
-	// Setup routes
 	routes.SetupRoutes(router)
 
-	// Start server
 	addr := fmt.Sprintf(":%%s", cfg.Port)
-	log.Printf("🚀 Server starting on http://localhost:%%s", cfg.Port)
+	log.Printf("Server starting on http://localhost:%%s", cfg.Port)
 	
 	if err := router.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %%v", err)
@@ -177,26 +192,21 @@ require (
 }
 
 func (g *ProjectGenerator) generateGitignore() string {
-	return `# Binaries for programs and plugins
+	return `# Binaries
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with go test -c
 *.test
-
-# Output of the go coverage tool
 *.out
 
-# Dependency directories
+# Directories
 vendor/
+bin/
+dist/
 
-# Go workspace file
-go.work
-
-# Environment variables
+# Environment
 .env
 .env.local
 
@@ -205,7 +215,6 @@ go.work
 .vscode/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
@@ -213,77 +222,38 @@ Thumbs.db
 `
 }
 
-func (g *ProjectGenerator) generateReadme() string {
+func (g *ProjectGenerator) generateRESTReadme() string {
 	return fmt.Sprintf(`# %s
 
 %s
 
-## Project Structure
-
-%s/
-├── cmd/                    # Command-line applications
-├── internal/
-│   ├── controllers/        # HTTP handlers (like Spring Boot @RestController)
-│   ├── services/          # Business logic layer
-│   └── models/            # Data models and DTOs
-├── config/                # Configuration files
-├── routes/                # Route definitions
-├── main.go                # Application entry point
-└── README.md
-
 ## Getting Started
 
-### Prerequisites
-
-- Go 1.21 or higher
-
-### Installation
-
 1. Install dependencies:
-%s%s%s
+`+"```bash"+`
 go mod tidy
-%s%s%s
+`+"```"+`
 
 2. Run the application:
-%s%s%s
+`+"```bash"+`
 go run main.go
-%s%s%s
+`+"```"+`
 
 The server will start on http://localhost:%s
 
 ## API Endpoints
 
-- GET /health - Health check endpoint
+- GET /health - Health check
 - GET /api/users - Get all users
 - GET /api/users/:id - Get user by ID
-- POST /api/users - Create a new user
+- POST /api/users - Create user
 - PUT /api/users/:id - Update user
 - DELETE /api/users/:id - Delete user
-
-## Development
-
-### Running in development mode
-
-%s%s%s
-go run main.go
-%s%s%s
-
-### Building for production
-
-%s%s%s
-go build -o app
-./app
-%s%s%s
 
 ## License
 
 MIT
-`, strings.ToUpper(g.ProjectName), g.Description, g.ProjectName,
-		"```", "bash", "", "", "", "```",
-		"```", "bash", "", "", "", "```",
-		g.Port,
-		"```", "bash", "", "", "", "```",
-		"```", "bash", "", "", "", "```")
+`, strings.ToUpper(g.ProjectName), g.Description, g.Port)
 }
 
 func (g *ProjectGenerator) generateConfigFile() string {
@@ -324,13 +294,10 @@ import (
 )
 
 func SetupRoutes(router *gin.Engine) {
-	// Health check endpoint
 	router.GET("/health", controllers.HealthCheck)
 
-	// API v1 group
 	v1 := router.Group("/api")
 	{
-		// User routes
 		users := v1.Group("/users")
 		{
 			users.GET("", controllers.GetAllUsers)
@@ -353,7 +320,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HealthCheck handles health check requests
 func HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",
@@ -378,7 +344,6 @@ import (
 
 var userService = services.NewUserService()
 
-// GetAllUsers retrieves all users
 func GetAllUsers(c *gin.Context) {
 	users := userService.GetAll()
 	c.JSON(http.StatusOK, models.SuccessResponse{
@@ -388,7 +353,6 @@ func GetAllUsers(c *gin.Context) {
 	})
 }
 
-// GetUserByID retrieves a user by ID
 func GetUserByID(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -415,7 +379,6 @@ func GetUserByID(c *gin.Context) {
 	})
 }
 
-// CreateUser creates a new user
 func CreateUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -434,7 +397,6 @@ func CreateUser(c *gin.Context) {
 	})
 }
 
-// UpdateUser updates an existing user
 func UpdateUser(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -471,7 +433,6 @@ func UpdateUser(c *gin.Context) {
 	})
 }
 
-// DeleteUser deletes a user
 func DeleteUser(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -509,21 +470,18 @@ import (
 	"%s/internal/models"
 )
 
-// UserService handles business logic for users
 type UserService struct {
 	users  []*models.User
 	nextID int64
 	mu     sync.RWMutex
 }
 
-// NewUserService creates a new UserService instance
 func NewUserService() *UserService {
 	service := &UserService{
 		users:  make([]*models.User, 0),
 		nextID: 1,
 	}
 	
-	// Add some sample data
 	service.users = append(service.users, &models.User{
 		ID:    service.nextID,
 		Name:  "John Doe",
@@ -541,14 +499,12 @@ func NewUserService() *UserService {
 	return service
 }
 
-// GetAll returns all users
 func (s *UserService) GetAll() []*models.User {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.users
 }
 
-// GetByID finds a user by ID
 func (s *UserService) GetByID(id int64) (*models.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -561,7 +517,6 @@ func (s *UserService) GetByID(id int64) (*models.User, error) {
 	return nil, errors.New("user not found")
 }
 
-// Create adds a new user
 func (s *UserService) Create(user *models.User) *models.User {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -572,7 +527,6 @@ func (s *UserService) Create(user *models.User) *models.User {
 	return user
 }
 
-// Update modifies an existing user
 func (s *UserService) Update(user *models.User) (*models.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -586,7 +540,6 @@ func (s *UserService) Update(user *models.User) (*models.User, error) {
 	return nil, errors.New("user not found")
 }
 
-// Delete removes a user by ID
 func (s *UserService) Delete(id int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -605,7 +558,6 @@ func (s *UserService) Delete(id int64) error {
 func (g *ProjectGenerator) generateUserModel() string {
 	return `package models
 
-// User represents a user in the system
 type User struct {
 	ID    int64  ` + "`json:\"id\"`" + `
 	Name  string ` + "`json:\"name\" binding:\"required\"`" + `
@@ -614,21 +566,15 @@ type User struct {
 `
 }
 
-func (g *ProjectGenerator) generateRESTReadme() string {
-	return g.generateReadme()
-}
-
 func (g *ProjectGenerator) generateResponseModel() string {
 	return `package models
 
-// SuccessResponse represents a successful API response
 type SuccessResponse struct {
 	Success bool        ` + "`json:\"success\"`" + `
 	Data    interface{} ` + "`json:\"data,omitempty\"`" + `
 	Message string      ` + "`json:\"message,omitempty\"`" + `
 }
 
-// ErrorResponse represents an error API response
 type ErrorResponse struct {
 	Success bool   ` + "`json:\"success\"`" + `
 	Error   string ` + "`json:\"error\"`" + `
@@ -643,6 +589,7 @@ func (g *ProjectGenerator) generateCLIMainFile() string {
 
 import (
 	"fmt"
+	"os"
 
 	"%s/cmd"
 )
@@ -664,11 +611,6 @@ go 1.21
 require (
 	github.com/spf13/cobra v1.8.0
 )
-
-require (
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-)
 `, g.ModuleName)
 }
 
@@ -679,58 +621,21 @@ func (g *ProjectGenerator) generateCLIReadme() string {
 
 ## Installation
 
-Build the CLI:
-
-%s%s%s
+`+"```bash"+`
 go build -o %s
-%s%s%s
+`+"```"+`
 
 ## Usage
 
-%s%s%s
+`+"```bash"+`
 ./%s --help
 ./%s greet "World"
-./%s version
-%s%s%s
-
-## Project Structure
-
-%s%s%s
-%s/
-├── cmd/
-│   └── root.go         # Root command and subcommands
-├── main.go             # Entry point
-├── go.mod
-└── README.md
-%s%s%s
-
-## Adding Commands
-
-Edit [cmd/root.go](cmd/root.go) to add new commands using Cobra.
-
-Example:
-%s%s%sgo
-var newCmd = &cobra.Command{
-    Use:   "new",
-    Short: "Create something new",
-    Run: func(cmd *cobra.Command, args []string) {
-        fmt.Println("Creating new...")
-    },
-}
-
-func init() {
-    rootCmd.AddCommand(newCmd)
-}
-%s%s%s
+`+"```"+`
 
 ## License
 
 MIT
-`, strings.ToUpper(g.ProjectName), g.Description,
-		"```", "bash", "", g.ProjectName, "", "", "```",
-		"```", "bash", "", g.ProjectName, g.ProjectName, g.ProjectName, "", "", "```",
-		"```", "", "", g.ProjectName, "", "", "```",
-		"```", "", "", "", "", "```")
+`, strings.ToUpper(g.ProjectName), g.Description, g.ProjectName, g.ProjectName, g.ProjectName)
 }
 
 func (g *ProjectGenerator) generateCLIRootCmd() string {
@@ -738,7 +643,6 @@ func (g *ProjectGenerator) generateCLIRootCmd() string {
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -749,17 +653,15 @@ var rootCmd = &cobra.Command{
 	Use:     "%s",
 	Short:   "%s",
 	Version: Version,
-	Long:    "%s\n\nA command-line tool built with Cobra.",
 }
 
-// Subcommands
 var greetCmd = &cobra.Command{
 	Use:   "greet [name]",
 	Short: "Greet someone",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
-		fmt.Printf("Hello, %%s! 👋\n", name)
+		fmt.Printf("Hello, %%s!\n", name)
 	},
 }
 
@@ -767,11 +669,10 @@ func init() {
 	rootCmd.AddCommand(greetCmd)
 }
 
-// Execute runs the root command
 func Execute() error {
 	return rootCmd.Execute()
 }
-`, g.ProjectName, g.Description, g.Description)
+`, g.ProjectName, g.Description)
 }
 
 // ==================== TUI Generators ====================
@@ -809,24 +710,6 @@ require (
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.9.1
 )
-
-require (
-	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
-	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b // indirect
-	github.com/muesli/cancelreader v0.2.2 // indirect
-	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.15.2 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
-	golang.org/x/text v0.3.8 // indirect
-)
 `, g.ModuleName)
 }
 
@@ -837,39 +720,10 @@ func (g *ProjectGenerator) generateTUIReadme() string {
 
 ## Installation
 
-Build and run:
-
-%s%s%s
+`+"```bash"+`
 go build
 ./%s
-%s%s%s
-
-Or run directly:
-
-%s%s%s
-go run .
-%s%s%s
-
-## Project Structure
-
-%s%s%s
-%s/
-├── internal/
-│   ├── ui/
-│   │   ├── ui.go           # Main UI logic and update loop
-│   │   └── styles.go       # Lipgloss styles
-│   └── models/
-│       └── model.go        # Data models
-├── main.go                  # Entry point
-├── go.mod
-└── README.md
-%s%s%s
-
-## Features
-
-- 🎨 Beautiful terminal UI with Lipgloss
-- ⌨️  Interactive navigation with Bubble Tea
-- 🚀 Simple and extensible architecture
+`+"```"+`
 
 ## Controls
 
@@ -877,17 +731,10 @@ go run .
 - **Enter** - Select
 - **q** or **Ctrl+C** - Quit
 
-## Customization
-
-Edit the files in [internal/ui/](internal/ui/) to customize the appearance and behavior.
-
 ## License
 
 MIT
-`, strings.ToUpper(g.ProjectName), g.Description,
-		"```", "bash", "", g.ProjectName, "", "", "```",
-		"```", "bash", "", "", "", "```",
-		"```", "", "", g.ProjectName, "", "", "```")
+`, strings.ToUpper(g.ProjectName), g.Description, g.ProjectName)
 }
 
 func (g *ProjectGenerator) generateTUIUIFile() string {
@@ -932,7 +779,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "enter", " ":
-			// Handle selection
 			if m.Cursor == len(m.Choices)-1 {
 				return m, tea.Quit
 			}
@@ -984,18 +830,18 @@ var (
 func RenderView(m Model) string {
 	var s strings.Builder
 
-	s.WriteString(titleStyle.Render("🎨 Interactive TUI App"))
+	s.WriteString(titleStyle.Render("Interactive TUI App"))
 	s.WriteString("\n\n")
 
 	for i, choice := range m.Choices {
 		cursor := " "
 		if m.Cursor == i {
-			cursor = cursorStyle.Render("▸")
+			cursor = cursorStyle.Render(">")
 		}
 
 		checked := " "
 		if _, ok := m.Selected[i]; ok {
-			checked = "✓"
+			checked = "x"
 		}
 
 		if m.Cursor == i {
@@ -1006,7 +852,7 @@ func RenderView(m Model) string {
 	}
 
 	s.WriteString("\n")
-	s.WriteString(helpStyle.Render("↑/↓: Navigate • Space: Select • q: Quit"))
+	s.WriteString(helpStyle.Render("up/down: Navigate | space: Select | q: Quit"))
 	s.WriteString("\n")
 
 	return s.String()

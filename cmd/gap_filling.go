@@ -185,7 +185,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case processingDone:
 		m.result = fillTemplate(m.template, m.values)
-		clipboard.WriteAll(m.result)
+		cleanResult := strings.ReplaceAll(m.result, "\x00", "")
+		clipboard.WriteAll(cleanResult)
 		m.state = statePreview
 		time.Sleep(200 * time.Millisecond)
 		m.state = stateAskContinue
@@ -316,6 +317,10 @@ func extractPlaceholders(template string) []string {
 	for _, match := range matches {
 		if len(match) > 1 {
 			placeholder := match[1]
+			// Skip :today placeholder as it will be auto-filled
+			if placeholder == "today" {
+				continue
+			}
 			if !seen[placeholder] {
 				placeholders = append(placeholders, placeholder)
 				seen[placeholder] = true
@@ -328,6 +333,11 @@ func extractPlaceholders(template string) []string {
 
 func fillTemplate(template string, values map[string]string) string {
 	result := template
+
+	// Auto-fill :today with current date in DD/MM/YYYY format
+	today := time.Now().Format("02/01/2006")
+	result = strings.ReplaceAll(result, ":today", today)
+
 	for placeholder, value := range values {
 		result = strings.ReplaceAll(result, ":"+placeholder, value)
 	}
