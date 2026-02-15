@@ -20,7 +20,7 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
-type Config struct {
+type JenkinsConfig struct {
 	JenkinsURL string `json:"jenkins_url"`
 	Username   string `json:"username"`
 	Secret     string `json:"secret"` // password or API token
@@ -51,7 +51,7 @@ func jenkinsConfigDir() (string, error) {
 	return filepath.Join(home, ".jenkins-cli"), nil
 }
 
-func loadJenkinsConfig() (*Config, error) {
+func loadJenkinsConfig() (*JenkinsConfig, error) {
 	dir, err := jenkinsConfigDir()
 	if err != nil {
 		return nil, err
@@ -63,14 +63,14 @@ func loadJenkinsConfig() (*Config, error) {
 	}
 	defer f.Close()
 	dec := json.NewDecoder(f)
-	var cfg Config
+	var cfg JenkinsConfig
 	if err := dec.Decode(&cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
 }
 
-func saveJenkinsConfig(cfg *Config) error {
+func saveJenkinsConfig(cfg *JenkinsConfig) error {
 	dir, err := jenkinsConfigDir()
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func saveJenkinsConfig(cfg *Config) error {
 	return os.Rename(tmp, path)
 }
 
-func askForJenkinsConfig() (*Config, error) {
+func askForJenkinsConfig() (*JenkinsConfig, error) {
 	cyan := color.New(color.FgCyan).SprintFunc()
 	fmt.Println(cyan("\nJenkins CLI setup — let’s connect to your server."))
 
@@ -137,7 +137,7 @@ func askForJenkinsConfig() (*Config, error) {
 		return nil, err
 	}
 
-	cfg := &Config{JenkinsURL: strings.TrimRight(jURL, "/"), Username: user, Secret: secret}
+	cfg := &JenkinsConfig{JenkinsURL: strings.TrimRight(jURL, "/"), Username: user, Secret: secret}
 	if err := saveJenkinsConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func basicAuthHeader(user, pass string) string {
 	return "Basic " + token
 }
 
-func getCrumb(client *http.Client, cfg *Config) (field, crumb string, err error) {
+func getCrumb(client *http.Client, cfg *JenkinsConfig) (field, crumb string, err error) {
 	req, err := http.NewRequest("GET", cfg.JenkinsURL+"/crumbIssuer/api/json", nil)
 	if err != nil {
 		return "", "", err
@@ -176,7 +176,7 @@ func getCrumb(client *http.Client, cfg *Config) (field, crumb string, err error)
 	return cr.CrumbRequestField, cr.Crumb, nil
 }
 
-func triggerBuild(cfg *Config, job string, params map[string]string) error {
+func triggerBuild(cfg *JenkinsConfig, job string, params map[string]string) error {
 	// Use a client with cookie jar so the crumb session is preserved
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Timeout: 30 * time.Second, Jar: jar}
@@ -261,7 +261,7 @@ func triggerBuild(cfg *Config, job string, params map[string]string) error {
 	return fmt.Errorf("trigger failed: %s: %s", resp.Status, string(b))
 }
 
-func fetchJobBuilds(cfg *Config, job string, limit int) ([]buildInfo, error) {
+func fetchJobBuilds(cfg *JenkinsConfig, job string, limit int) ([]buildInfo, error) {
 	// Cookie jar is not strictly required for GET, but harmless and consistent
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Timeout: 30 * time.Second, Jar: jar}
@@ -288,7 +288,7 @@ func fetchJobBuilds(cfg *Config, job string, limit int) ([]buildInfo, error) {
 	return ji.Builds, nil
 }
 
-func fetchBuildLog(cfg *Config, job string, buildNum int64) (string, error) {
+func fetchBuildLog(cfg *JenkinsConfig, job string, buildNum int64) (string, error) {
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Timeout: 60 * time.Second, Jar: jar}
 	endpoint := fmt.Sprintf("%s/%d/consoleText", buildJobPathBase(cfg, job), buildNum)
@@ -313,7 +313,7 @@ func fetchBuildLog(cfg *Config, job string, buildNum int64) (string, error) {
 	return buf.String(), nil
 }
 
-func ensureJenkinsConfig() (*Config, error) {
+func ensureJenkinsConfig() (*JenkinsConfig, error) {
 	cfg, err := loadJenkinsConfig()
 	if err == nil {
 		return cfg, nil
@@ -367,11 +367,11 @@ func readKeyValueParams() map[string]string {
 	return res
 }
 
-func jenkinsConfigureMenu() (*Config, error) {
+func jenkinsConfigureMenu() (*JenkinsConfig, error) {
 	return askForJenkinsConfig()
 }
 
-func main() {
+func jenkinsCliMain() {
 	jenkinsClearScreen()
 	color.Cyan("✨ Jenkins CLI — Trigger builds, view history and logs. Hello!")
 	cfg, err := ensureJenkinsConfig()
@@ -511,7 +511,7 @@ type jobsResponse struct {
 	} `json:"jobs"`
 }
 
-func fetchJobs(cfg *Config) ([]string, error) {
+func fetchJobs(cfg *JenkinsConfig) ([]string, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	endpoint := cfg.JenkinsURL + "/api/json?tree=jobs[name,fullName]"
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -547,7 +547,7 @@ func fetchJobs(cfg *Config) ([]string, error) {
 
 // buildJobPathBase builds the base URL path for a (possibly nested) job full name.
 // Jenkins expects /job/seg1/job/seg2 for nested jobs.
-func buildJobPathBase(cfg *Config, fullName string) string {
+func buildJobPathBase(cfg *JenkinsConfig, fullName string) string {
 	if strings.TrimSpace(fullName) == "" {
 		return cfg.JenkinsURL + "/job/" // fallback
 	}
@@ -562,7 +562,7 @@ func buildJobPathBase(cfg *Config, fullName string) string {
 }
 
 // selectJob shows a list of jobs fetched from Jenkins and returns the chosen job full name.
-func selectJob(cfg *Config) (string, bool) {
+func selectJob(cfg *JenkinsConfig) (string, bool) {
 	jobs, err := fetchJobs(cfg)
 	if err != nil {
 		color.Red("Failed to fetch jobs: %v", err)

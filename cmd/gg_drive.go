@@ -19,11 +19,11 @@ import (
 	"google.golang.org/api/option"
 )
 
-type Config struct {
+type DriveConfig struct {
 	CredentialsPath string `json:"credentials_path"`
 }
 
-func main() {
+func ggDriveMain() {
 	clearScreen()
 	printBanner()
 
@@ -140,7 +140,7 @@ func ggdriveConfigDir() (string, error) {
 	return filepath.Join(home, ".ggdrive"), nil
 }
 
-func loadConfig() (*Config, error) {
+func loadConfig() (*DriveConfig, error) {
 	dir, err := ggdriveConfigDir()
 	if err != nil {
 		return nil, err
@@ -151,14 +151,14 @@ func loadConfig() (*Config, error) {
 		return nil, err
 	}
 	defer f.Close()
-	var cfg Config
+	var cfg DriveConfig
 	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
 }
 
-func saveConfig(cfg *Config) error {
+func saveConfig(cfg *DriveConfig) error {
 	dir, err := ggdriveConfigDir()
 	if err != nil {
 		return err
@@ -199,7 +199,7 @@ func configureCredentials() error {
 		return err
 	}
 
-	cfg := &Config{CredentialsPath: path}
+	cfg := &DriveConfig{CredentialsPath: path}
 	if err := saveConfig(cfg); err != nil {
 		return err
 	}

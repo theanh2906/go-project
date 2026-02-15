@@ -131,7 +131,7 @@ func killProcess(pid int) error {
 
 // Styles for the TUI
 var (
-	headerStyle = lipgloss.NewStyle().
+	pmHeaderStyle = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("15")).
 		Background(lipgloss.Color("62")).
@@ -144,7 +144,7 @@ var (
 	normalRowStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("15"))
 
-	errorStyle = lipgloss.NewStyle().
+	pmErrorStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("9")).
 		Bold(true)
 
@@ -244,7 +244,7 @@ func (m Model) View() string {
 	var s strings.Builder
 
 	// Title
-	s.WriteString(headerStyle.Render("Port Manager - Network Connections"))
+	s.WriteString(pmHeaderStyle.Render("Port Manager - Network Connections"))
 	s.WriteString("\n\n")
 
 	if m.loading {
@@ -253,14 +253,14 @@ func (m Model) View() string {
 	}
 
 	if m.error != "" {
-		s.WriteString(errorStyle.Render("Error: " + m.error))
+		s.WriteString(pmErrorStyle.Render("Error: " + m.error))
 		s.WriteString("\n\n")
 	}
 
 	// Table header
 	header := fmt.Sprintf("%-8s %-8s %-20s %-15s %-8s %-15s", 
 		"Protocol", "Port", "Local Address", "Remote Address", "PID", "Process")
-	s.WriteString(headerStyle.Render(header))
+	s.WriteString(pmHeaderStyle.Render(header))
 	s.WriteString("\n")
 
 	// Table rows
@@ -313,7 +313,7 @@ func truncateString(s string, length int) string {
 	return s[:length-3] + "..."
 }
 
-func main() {
+func portManagementMain() {
 	// Initialize the model
 	m := Model{
 		loading:    true,

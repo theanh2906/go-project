@@ -176,7 +176,7 @@ func removeFirstUser() (bool, error) {
 	return false, nil
 }
 
-func main() {
+func mongoUtilsMain() {
 	mongoClearScreen()
 	color.Cyan("✨ MongoDB CLI — Manage your MongoDB data. Hello!")
 	cfg, err := ensureMongoConfig()

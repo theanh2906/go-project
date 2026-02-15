@@ -26,7 +26,7 @@ const (
 	stateDone
 )
 
-type model struct {
+type gapFillingModel struct {
 	templatePath  string
 	template      string
 	placeholders  []string
@@ -43,7 +43,7 @@ type model struct {
 
 var (
 	// Color styles using lipgloss
-	titleStyle = lipgloss.NewStyle().
+	gfTitleStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FF00FF")).
 			Bold(true)
 
@@ -54,14 +54,14 @@ var (
 			BorderForeground(lipgloss.Color("#00FFFF")).
 			Padding(1, 2)
 
-	headerStyle = lipgloss.NewStyle().
+	gfHeaderStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFF00")).
 			Bold(true)
 
 	successStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#00FF00"))
 
-	errorStyle = lipgloss.NewStyle().
+	gfErrorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FF0000"))
 
 	dimStyle = lipgloss.NewStyle().
@@ -81,7 +81,7 @@ var (
 			Foreground(lipgloss.Color("#00FFFF"))
 )
 
-func (m model) Init() tea.Cmd {
+func (m gapFillingModel) Init() tea.Cmd {
 	return loadTemplate(m.templatePath)
 }
 
@@ -109,7 +109,7 @@ func processTemplate() tea.Cmd {
 	}
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m gapFillingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -196,20 +196,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m gapFillingModel) View() string {
 	if m.width == 0 {
 		return "Initializing..."
 	}
 
 	switch m.state {
 	case stateLoading:
-		return renderBanner() + "\n\n" + headerStyle.Render("📋 Loading Template...") + "\n"
+		return renderBanner() + "\n\n" + gfHeaderStyle.Render("📋 Loading Template...") + "\n"
 
 	case stateCollectingInput:
 		var s strings.Builder
 		s.WriteString(renderBanner())
 		s.WriteString("\n\n")
-		s.WriteString(headerStyle.Render("🔍 Detected Placeholders") + "\n")
+		s.WriteString(gfHeaderStyle.Render("🔍 Detected Placeholders") + "\n")
 		s.WriteString(separatorStyle.Render(strings.Repeat("─", 66)) + "\n")
 		s.WriteString(fmt.Sprintf("Found %s placeholder(s):\n\n", placeholderStyle.Render(fmt.Sprintf("%d", len(m.placeholders)))))
 
@@ -223,7 +223,7 @@ func (m model) View() string {
 			}
 		}
 
-		s.WriteString("\n" + headerStyle.Render("✏️  Fill Values") + "\n")
+		s.WriteString("\n" + gfHeaderStyle.Render("✏️  Fill Values") + "\n")
 		s.WriteString(separatorStyle.Render(strings.Repeat("─", 66)) + "\n")
 		s.WriteString(dimStyle.Render("Please provide a value for each placeholder") + "\n\n")
 
@@ -234,12 +234,12 @@ func (m model) View() string {
 		return s.String()
 
 	case stateProcessing:
-		return renderBanner() + "\n\n" + headerStyle.Render("⚙️  Processing...") + "\n"
+		return renderBanner() + "\n\n" + gfHeaderStyle.Render("⚙️  Processing...") + "\n"
 
 	case statePreview:
 		var s strings.Builder
 		s.WriteString(separatorStyle.Render("╔"+strings.Repeat("═", 64)+"╗") + "\n")
-		s.WriteString(separatorStyle.Render("║") + "  " + headerStyle.Render("📄 RESULT PREVIEW") + strings.Repeat(" ", 46) + separatorStyle.Render("║") + "\n")
+		s.WriteString(separatorStyle.Render("║") + "  " + gfHeaderStyle.Render("📄 RESULT PREVIEW") + strings.Repeat(" ", 46) + separatorStyle.Render("║") + "\n")
 		s.WriteString(separatorStyle.Render("╚"+strings.Repeat("═", 64)+"╝") + "\n\n")
 
 		for _, line := range strings.Split(m.result, "\n") {
@@ -254,7 +254,7 @@ func (m model) View() string {
 		var s strings.Builder
 		if m.result != "" {
 			s.WriteString(separatorStyle.Render("╔"+strings.Repeat("═", 64)+"╗") + "\n")
-			s.WriteString(separatorStyle.Render("║") + "  " + headerStyle.Render("📄 RESULT PREVIEW") + strings.Repeat(" ", 46) + separatorStyle.Render("║") + "\n")
+			s.WriteString(separatorStyle.Render("║") + "  " + gfHeaderStyle.Render("📄 RESULT PREVIEW") + strings.Repeat(" ", 46) + separatorStyle.Render("║") + "\n")
 			s.WriteString(separatorStyle.Render("╚"+strings.Repeat("═", 64)+"╝") + "\n\n")
 
 			lines := strings.Split(m.result, "\n")
@@ -279,12 +279,12 @@ func (m model) View() string {
 
 	case stateDone:
 		if m.err != nil {
-			return errorStyle.Render(fmt.Sprintf("✗ Error: %v\n", m.err))
+			return gfErrorStyle.Render(fmt.Sprintf("✗ Error: %v\n", m.err))
 		}
 		var s strings.Builder
 		s.WriteString("\n" + separatorStyle.Render("╔"+strings.Repeat("═", 64)+"╗") + "\n")
 		s.WriteString(separatorStyle.Render("║") + strings.Repeat(" ", 66) + separatorStyle.Render("║") + "\n")
-		s.WriteString(separatorStyle.Render("║") + "     " + titleStyle.Render("✨ Thanks for using Template Generator! ✨") + "      " + separatorStyle.Render("║") + "\n")
+		s.WriteString(separatorStyle.Render("║") + "     " + gfTitleStyle.Render("✨ Thanks for using Template Generator! ✨") + "      " + separatorStyle.Render("║") + "\n")
 		s.WriteString(separatorStyle.Render("║") + strings.Repeat(" ", 66) + separatorStyle.Render("║") + "\n")
 		s.WriteString(separatorStyle.Render("║") + "     " + resultStyle.Render("Have a great day! 👋") + strings.Repeat(" ", 32) + separatorStyle.Render("║") + "\n")
 		s.WriteString(separatorStyle.Render("║") + strings.Repeat(" ", 66) + separatorStyle.Render("║") + "\n")
@@ -344,7 +344,7 @@ func fillTemplate(template string, values map[string]string) string {
 	return result
 }
 
-func main() {
+func gapFillingMain() {
 	var templatePath string
 
 	rootCmd := &cobra.Command{
@@ -360,11 +360,11 @@ It provides a beautiful interactive interface to collect values and copies the r
   tg -t emails/welcome.txt`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if templatePath == "" {
-				fmt.Println(errorStyle.Render("✗ Template path is required. Use -t or --template flag"))
+				fmt.Println(gfErrorStyle.Render("✗ Template path is required. Use -t or --template flag"))
 				os.Exit(1)
 			}
 
-			m := model{
+			m := gapFillingModel{
 				templatePath: templatePath,
 				values:       make(map[string]string),
 				state:        stateLoading,

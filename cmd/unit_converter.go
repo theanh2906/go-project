@@ -307,7 +307,7 @@ func (m unitConverterModel) viewConvert() string {
 	return s.String()
 }
 
-func main() {
+func unitConverterMain() {
 	p := tea.NewProgram(unitConverterInitialModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)

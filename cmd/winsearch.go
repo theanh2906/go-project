@@ -38,7 +38,7 @@ type WindowSearchTool struct {
 	searchTime time.Duration
 }
 
-func main() {
+func winsearchMain() {
 	if runtime.GOOS != "windows" {
 		color.Red("❌ This tool is designed for Windows only")
 		return
