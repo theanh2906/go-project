@@ -1,7 +1,5 @@
 ﻿package main
-type ProjectType string
-const (
-TypeREST ProjectType = "REST"
-TypeCLI  ProjectType = "CLI"
-TypeTUI  ProjectType = "TUI"
-)
+
+// Types are now defined in their respective packages:
+// - frameworks.ProjectType → frameworks/base.go
+// - files.FileType         → files/base.go

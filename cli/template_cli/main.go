@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go-cli/files"
+	"go-cli/frameworks"
+
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -99,11 +102,11 @@ type model struct {
 	message          string
 	width            int
 	height           int
-	projectType      ProjectType
+	projectType      frameworks.ProjectType
 	projectName      string
 	projectDesc      string
 	projectPort      string
-	fileType         FileType
+	fileType         files.FileType
 	fileServiceName  string
 	filePort         string
 	copyOnly         bool
@@ -119,27 +122,28 @@ var mainMenuItems = []string{
 }
 
 var projectTypeItems = []struct {
-	Type ProjectType
+	Type frameworks.ProjectType
 	Name string
 	Desc string
 	Icon string
 }{
-	{TypeREST, "REST API", "REST API server with Gin framework", "🌐"},
-	{TypeCLI, "CLI Tool", "Command-line tool with Cobra", "⌨️"},
-	{TypeTUI, "TUI App", "Terminal UI app with Bubble Tea", "🎨"},
+	{frameworks.TypeREST, "REST API", "REST API server with Gin framework", "🌐"},
+	{frameworks.TypeCLI, "CLI Tool", "Command-line tool with Cobra", "⌨️"},
+	{frameworks.TypeTUI, "TUI App", "Terminal UI app with Bubble Tea", "🎨"},
+	{frameworks.TypeFullStack, "FullStack App", "React + Go Gin, bundled into single exe", "⚡"},
 }
 
 var fileTypeItems = []struct {
-	Type FileType
+	Type files.FileType
 	Name string
 	Desc string
 	Icon string
 }{
-	{FileTypeDockerCompose, "Docker Compose", "docker-compose.yml configuration", "🐳"},
-	{FileTypeDockerfile, "Dockerfile", "Multi-stage Dockerfile for Go", "📦"},
-	{FileTypeJenkinsfile, "Jenkinsfile", "Jenkins CI/CD pipeline", "🔧"},
-	{FileTypeGitignore, ".gitignore", "Git ignore file for Go projects", "🙈"},
-	{FileTypeEnvExample, ".env.example", "Environment variables template", "🔐"},
+	{files.FileTypeDockerCompose, "Docker Compose", "docker-compose.yml configuration", "🐳"},
+	{files.FileTypeDockerfile, "Dockerfile", "Multi-stage Dockerfile for Go", "📦"},
+	{files.FileTypeJenkinsfile, "Jenkinsfile", "Jenkins CI/CD pipeline", "🔧"},
+	{files.FileTypeGitignore, ".gitignore", "Git ignore file for Go projects", "🙈"},
+	{files.FileTypeEnvExample, ".env.example", "Environment variables template", "🔐"},
 }
 
 func initialModel() model {
@@ -293,7 +297,7 @@ func (m model) updateProjectNameInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.err = fmt.Errorf("project name cannot be empty")
 				return m, nil
 			}
-			if !IsValidProjectName(name) {
+			if !frameworks.IsValidProjectName(name) {
 				m.err = fmt.Errorf("invalid name: use only lowercase letters, numbers, and hyphens")
 				return m, nil
 			}
@@ -320,7 +324,7 @@ func (m model) updateProjectDescInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.projectDesc = desc
 
-			if m.projectType == TypeREST {
+			if m.projectType == frameworks.TypeREST || m.projectType == frameworks.TypeFullStack {
 				m.state = stateProjectPortInput
 				m.textInput.SetValue("")
 				m.textInput.Placeholder = "8080"
@@ -431,7 +435,7 @@ func (m model) updateCopyOnlyConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = stateFilePathInput
 				m.textInput.SetValue("")
 				cwd, _ := os.Getwd()
-				m.textInput.Placeholder = filepath.Join(cwd, GetDefaultFileName(m.fileType))
+				m.textInput.Placeholder = filepath.Join(cwd, files.GetDefaultFileName(m.fileType))
 				return m, nil
 			}
 		}
@@ -448,7 +452,7 @@ func (m model) updateFilePathInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			path := strings.TrimSpace(m.textInput.Value())
 			if path == "" {
 				cwd, _ := os.Getwd()
-				path = filepath.Join(cwd, GetDefaultFileName(m.fileType))
+				path = filepath.Join(cwd, files.GetDefaultFileName(m.fileType))
 			}
 			m.filePath = path
 			return m, m.generateFile()
@@ -479,7 +483,7 @@ type generationDoneMsg struct {
 func (m *model) generateProject() tea.Cmd {
 	m.state = stateGenerating
 	return func() tea.Msg {
-		generator := NewProjectGenerator(m.projectName, m.projectDesc, m.projectPort, m.projectType)
+		generator := frameworks.NewProjectGenerator(m.projectName, m.projectDesc, m.projectPort, m.projectType)
 
 		if err := generator.CreateDirectories(); err != nil {
 			return generationDoneMsg{err: fmt.Errorf("failed to create directories: %w", err)}
@@ -489,9 +493,14 @@ func (m *model) generateProject() tea.Cmd {
 			return generationDoneMsg{err: fmt.Errorf("failed to generate files: %w", err)}
 		}
 
-		_ = RunGoModTidy(m.projectName)
+		_ = frameworks.RunGoModTidy(m.projectName)
 
-		msg := fmt.Sprintf("✨ Project '%s' created successfully!\n\nNext steps:\n  cd %s\n  go run .\n\nHappy coding! 🎉", m.projectName, m.projectName)
+		var msg string
+		if m.projectType == frameworks.TypeFullStack {
+			msg = fmt.Sprintf("✨ Project '%s' created successfully!\n\nNext steps:\n  cd %s\n  cd frontend && npm install && cd ..\n  go mod tidy\n\nDev mode:\n  go run main.go          (backend)\n  cd frontend && npm run dev (frontend)\n\nBuild exe:\n  build.bat               (Windows)\n  make build              (Linux/macOS)\n\nHappy coding! 🎉", m.projectName, m.projectName)
+		} else {
+			msg = fmt.Sprintf("✨ Project '%s' created successfully!\n\nNext steps:\n  cd %s\n  go run .\n\nHappy coding! 🎉", m.projectName, m.projectName)
+		}
 
 		return generationDoneMsg{message: msg}
 	}
@@ -500,7 +509,7 @@ func (m *model) generateProject() tea.Cmd {
 func (m *model) generateFile() tea.Cmd {
 	m.state = stateGenerating
 	return func() tea.Msg {
-		info := &FileGeneratorInfo{
+		info := &files.FileGeneratorInfo{
 			ServiceName: m.fileServiceName,
 			Port:        m.filePort,
 			ModuleName:  m.fileServiceName,
@@ -508,7 +517,7 @@ func (m *model) generateFile() tea.Cmd {
 			GoVersion:   "1.21",
 		}
 
-		generator := NewFileGenerator(m.filePath, m.fileType, info)
+		generator := files.NewFileGenerator(m.filePath, m.fileType, info)
 		content := generator.GetContent()
 
 		if m.copyOnly {
@@ -516,7 +525,7 @@ func (m *model) generateFile() tea.Cmd {
 			if err != nil {
 				return generationDoneMsg{err: fmt.Errorf("failed to copy to clipboard: %w", err)}
 			}
-			return generationDoneMsg{message: fmt.Sprintf("📋 Content copied to clipboard!\n\nFile type: %s", GetDefaultFileName(m.fileType))}
+			return generationDoneMsg{message: fmt.Sprintf("📋 Content copied to clipboard!\n\nFile type: %s", files.GetDefaultFileName(m.fileType))}
 		}
 
 		generator.Path = m.filePath
